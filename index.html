@@ -1,104 +1,106 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Send</title>
-  <style>
-    body { font-family: sans-serif; max-width: 400px; margin: 60px auto; padding: 0 16px; }
-    input, textarea, button { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px; font-size: 16px; }
-    textarea { height: 120px; }
-    #status { margin-top: 10px; color: green; }
-  </style>
-</head>
-<body>
-<div id="setup" style="display:none">
-  <h2>Setup</h2>
-  <input id="passInput" type="password" placeholder="Enter passphrase">
-  <button onclick="savePass()">Save & Continue</button>
-</div>
-<div id="main" style="display:none">
-  <h2>Send Message</h2>
-  <textarea id="msg" placeholder="Type your message..."></textarea>
-  <button onclick="sendMsg()">Send</button>
-  <button onclick="changePass()" style="background:#aaa;margin-top:5px">Change Passphrase</button>
-  <div id="status"></div>
-</div>
-<script>
-const BOT_TOKEN_B = '8230367366:AAHH5uQrckRktya5ifD4whX9efE0CR95ZBU';
-const CHAT_ID_B = '-5063897870';
+"""
+Prompt:Any script you generate will be launched as a subprocess by assistantTerminal.pyw using subprocess.Popen([sys.executable, script_path]). This means:
 
-async function getKey(passphrase, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
-  );
-}
+Never use sys.exit() with non-zero codes — it can destabilize the parent process. To exit on error, just let the script end naturally or call sys.exit(0).
+Never block the main thread while a tkinter mainloop is running — no threading.Thread.join(), time.sleep(), or other blocking calls on the main thread. Use root.after() for polling, and daemon threads for background work.
+All errors must be handled internally — wrap everything in try/except. Unhandled exceptions should log or notify silently and then exit cleanly without propagating.
+The script runs in its own process — it has no shared memory with the parent, but it does share system resources like global keyboard hooks (keyboard library). Avoid registering global hooks unless explicitly needed, and always clean them up on exit.
+Exit cleanly — always destroy tkinter root windows explicitly in a _quit() method called from both WM_DELETE_WINDOW and any error handler. Never rely on the interpreter to clean up.
+"""
+import tkinter as tk
+import keyboard
+import threading
+import webbrowser
+import os
+import time
+import sys 
+import subprocess
+class MiniTerminal:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.setup_window()
+        self.setup_ui()
+        
+        self.is_active = False
+        self.root.withdraw()
+        
+        # Start the global hotkey listener
+        # Use suppress=True to stop 'z' from appearing in other apps
+        keyboard.add_hotkey('`', self.toggle_visible, suppress=True)
 
-async function encrypt(text, passphrase) {
-  const enc = new TextEncoder();
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await getKey(passphrase, salt);
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text));
-  const buf = new Uint8Array(salt.byteLength + iv.byteLength + ciphertext.byteLength);
-  buf.set(salt, 0);
-  buf.set(iv, 16);
-  buf.set(new Uint8Array(ciphertext), 28);
-  return btoa(String.fromCharCode(...buf));
-}
+    def setup_window(self):
+        self.root.title("Terminal")
+        self.root.overrideredirect(True)
+        self.root.attributes('-topmost', True)
+        self.root.configure(bg='black')
 
-function savePass() {
-  const p = document.getElementById('passInput').value;
-  if (!p) return alert('Enter a passphrase');
-  localStorage.setItem('pp', p);
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('main').style.display = 'block';
-}
+        window_width, window_height = 360, 60
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = screen_width - window_width - 20
+        y = screen_height - window_height - 60
+        self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-function changePass() {
-  localStorage.removeItem('pp');
-  document.getElementById('main').style.display = 'none';
-  document.getElementById('passInput').value = '';
-  document.getElementById('setup').style.display = 'block';
-}
+    def setup_ui(self):
+        self.label = tk.Label(
+            self.root, text=">", bg='black', fg='#00FF00', 
+            font=('Courier', 13, 'bold'), anchor='w'
+        )
+        self.label.pack(fill='both', expand=True, padx=10)
 
-async function sendMsg() {
-  const text = document.getElementById('msg').value.trim();
-  if (!text) return;
-  const pp = localStorage.getItem('pp');
-  const encrypted = await encrypt(text, pp);
-  const url = `https://api.telegram.org/bot${BOT_TOKEN_B}/sendMessage`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: CHAT_ID_B, text: encrypted })
-  });
-  if (res.ok) {
-    document.getElementById('status').textContent = 'Sent!';
-    document.getElementById('msg').value = '';
-    setTimeout(() => document.getElementById('status').textContent = '', 2000);
-  } else {
-    document.getElementById('status').textContent = 'Failed.';
-  }
-}
+    def toggle_visible(self):
+        if not self.is_active:
+            self.is_active = True
+            self.label.config(text=">")
+            self.root.deiconify()
+            self.root.focus_force()
+            # Start hooking keys only when terminal is open
+            self.hook = keyboard.on_press(self.on_key_event, suppress=True)
 
-if (localStorage.getItem('pp')) {
-  document.getElementById('main').style.display = 'block';
-} else {
-  document.getElementById('setup').style.display = 'block';
-}
-</script>
-</body>
-</html>
-```
+    def on_key_event(self, event):
+        if not self.is_active:
+            return
 
-**To get `CHAT_ID_B`:**
+        key = event.name
+        current_text = self.label.cget("text")
 
-1. Create Bot B via @BotFather, copy its token
-2. Message Bot B once from your Telegram app (just say "hi")
-3. Open in browser:
-```
-https://api.telegram.org/botNEW_BOT_B_TOKEN/getUpdates
+        if key == 'enter':
+            cmd_text = current_text[1:].strip()
+            self.stop_interception()
+            self.execute_command(cmd_text)
+        elif key == 'backspace':
+            if len(current_text) > 1:
+                self.label.config(text=current_text[:-1])
+        elif key == 'space':
+            self.label.config(text=current_text + " ")
+        elif key == 'esc':
+            self.stop_interception()
+            self.root.withdraw()
+        elif len(key) == 1:
+            # This captures letters and numbers
+            self.label.config(text=current_text + key)
+
+    def stop_interception(self):
+        self.is_active = False
+        try:
+            keyboard.unhook(self.hook)
+        except:
+            pass
+
+    def execute_command(self, cmd):
+        # Add your custom logic here
+        if cmd == "yt":
+            webbrowser.open("https://www.youtube.com")
+        elif cmd == "col":
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            colpicker_path = os.path.join(script_dir, "colpicker.pyw")
+            subprocess.Popen([sys.executable, colpicker_path])
+        
+        self.root.withdraw()
+
+    def run(self):
+        self.root.mainloop()
+
+if __name__ == "__main__":
+    app = MiniTerminal()
+    app.run()
