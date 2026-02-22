@@ -12,13 +12,11 @@
   </style>
 </head>
 <body>
-
 <div id="setup" style="display:none">
   <h2>Setup</h2>
   <input id="passInput" type="password" placeholder="Enter passphrase">
   <button onclick="savePass()">Save & Continue</button>
 </div>
-
 <div id="main" style="display:none">
   <h2>Send Message</h2>
   <textarea id="msg" placeholder="Type your message..."></textarea>
@@ -26,10 +24,9 @@
   <button onclick="changePass()" style="background:#aaa;margin-top:5px">Change Passphrase</button>
   <div id="status"></div>
 </div>
-
 <script>
-const BOT_TOKEN = '8230367366:AAHH5uQrckRktya5ifD4whX9efE0CR95ZBU';
-const CHAT_ID = '8230367366';
+const BOT_TOKEN_B = '7767852236:AAFLPyyeIeompZbXqNSsol32B-IW_pVWXxE';
+const CHAT_ID_B = '8235125069';
 
 async function getKey(passphrase, salt) {
   const enc = new TextEncoder();
@@ -73,11 +70,11 @@ async function sendMsg() {
   if (!text) return;
   const pp = localStorage.getItem('pp');
   const encrypted = await encrypt(text, pp);
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  const url = `https://api.telegram.org/bot${BOT_TOKEN_B}/sendMessage`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: CHAT_ID, text: encrypted })
+    body: JSON.stringify({ chat_id: CHAT_ID_B, text: encrypted })
   });
   if (res.ok) {
     document.getElementById('status').textContent = 'Sent!';
@@ -96,5 +93,12 @@ if (localStorage.getItem('pp')) {
 </script>
 </body>
 </html>
+```
 
+**To get `CHAT_ID_B`:**
 
+1. Create Bot B via @BotFather, copy its token
+2. Message Bot B once from your Telegram app (just say "hi")
+3. Open in browser:
+```
+https://api.telegram.org/botNEW_BOT_B_TOKEN/getUpdates
