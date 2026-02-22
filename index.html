@@ -14,8 +14,8 @@
 <body>
 
 <div id="setup" style="display:none">
-  <h2>First-time Setup</h2>
-  <input id="passInput" type="password" placeholder="Choose a passphrase">
+  <h2>Setup</h2>
+  <input id="passInput" type="password" placeholder="Enter passphrase">
   <button onclick="savePass()">Save & Continue</button>
 </div>
 
@@ -23,6 +23,7 @@
   <h2>Send Message</h2>
   <textarea id="msg" placeholder="Type your message..."></textarea>
   <button onclick="sendMsg()">Send</button>
+  <button onclick="changePass()" style="background:#aaa;margin-top:5px">Change Passphrase</button>
   <div id="status"></div>
 </div>
 
@@ -60,6 +61,13 @@ function savePass() {
   document.getElementById('main').style.display = 'block';
 }
 
+function changePass() {
+  localStorage.removeItem('pp');
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('passInput').value = '';
+  document.getElementById('setup').style.display = 'block';
+}
+
 async function sendMsg() {
   const text = document.getElementById('msg').value.trim();
   if (!text) return;
@@ -80,7 +88,6 @@ async function sendMsg() {
   }
 }
 
-// On load
 if (localStorage.getItem('pp')) {
   document.getElementById('main').style.display = 'block';
 } else {
