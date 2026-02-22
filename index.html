@@ -25,7 +25,7 @@
   <div id="status"></div>
 </div>
 <script>
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/1475257490194301082/zIYWVFwgzK5L9YkZGHtR6IXud6FeWShb7Ihj1UgheT6-8Mw1iUFbP8nVXLdDmWj-Eciv';
+const NTFY_TOPIC = 'your-secret-random-topic-name';
 
 async function getKey(passphrase, salt) {
   const enc = new TextEncoder();
@@ -69,10 +69,9 @@ async function sendMsg() {
   if (!text) return;
   const pp = localStorage.getItem('pp');
   const encrypted = await encrypt(text, pp);
-  const res = await fetch(WEBHOOK_URL, {
+  const res = await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: encrypted })
+    body: encrypted
   });
   if (res.ok) {
     document.getElementById('status').textContent = 'Sent!';
