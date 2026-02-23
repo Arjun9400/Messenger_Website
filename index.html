@@ -427,7 +427,7 @@ async function sendMessage() {
     for (let i = 0; i < chunks.length; i++) {
       const isLast = i === chunks.length - 1;
       // Append hyphen to all chunks except the last
-      const chunk = chunks.length > 1 && !isLast ? chunks[i] + '-' : chunks[i];
+      const chunk = chunks.length > 1 && !isLast ? chunks[i] + '_' : chunks[i];
 
       btn.textContent = chunks.length > 1
         ? `ENCRYPTING ${i+1}/${chunks.length}...`
@@ -474,3 +474,4 @@ function toast(msg, type = 'ok') {
 </script>
 </body>
 </html>
+
