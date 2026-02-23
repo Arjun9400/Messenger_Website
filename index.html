@@ -1,91 +1,449 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Send</title>
-  <style>
-    body { font-family: sans-serif; max-width: 400px; margin: 60px auto; padding: 0 16px; }
-    input, textarea, button { width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px; font-size: 16px; }
-    textarea { height: 120px; }
-    #status { margin-top: 10px; color: green; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureSend</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #0a0c0f;
+    --panel: #111418;
+    --border: #1e2530;
+    --accent: #00e5ff;
+    --accent2: #ff3d71;
+    --text: #c8d6e5;
+    --muted: #4a5568;
+    --success: #00e676;
+    --warning: #ffab00;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(0,229,255,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(255,61,113,0.04) 0%, transparent 50%);
+  }
+
+  header {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--accent2); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    width: 100%;
+    max-width: 480px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--accent);
+    border-radius: 4px 0 0 4px;
+  }
+
+  .card.danger::before { background: var(--accent2); }
+  .card.hidden { display: none; }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    margin-top: 12px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  label:first-of-type { margin-top: 0; }
+
+  input, textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: none;
+  }
+
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  input[type="password"] { letter-spacing: 2px; }
+
+  textarea { height: 90px; line-height: 1.5; }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-top: 14px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    color: var(--accent);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn:hover {
+    background: rgba(0,229,255,0.08);
+    box-shadow: 0 0 20px rgba(0,229,255,0.15);
+  }
+
+  .btn:active { transform: scale(0.99); }
+
+  .btn.danger {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .btn.danger:hover {
+    background: rgba(255,61,113,0.08);
+    box-shadow: 0 0 20px rgba(255,61,113,0.15);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+    transition: transform 0.3s ease;
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.ok { border-color: var(--success); color: var(--success); }
+  #toast.err { border-color: var(--accent2); color: var(--accent2); }
+
+  .settings-toggle {
+    font-size: 11px;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+    text-decoration: underline;
+    padding: 4px 0;
+    display: block;
+    width: 100%;
+    max-width: 480px;
+    text-align: right;
+    margin-bottom: 8px;
+  }
+
+  .settings-toggle:hover { color: var(--text); }
+
+  .enc-preview {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    word-break: break-all;
+    line-height: 1.6;
+    margin-top: 10px;
+    padding: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    max-height: 60px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .char-count {
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    margin-top: 4px;
+  }
+</style>
 </head>
 <body>
-<div id="setup" style="display:none">
-  <h2>Setup</h2>
-  <input id="passInput" type="password" placeholder="Enter passphrase">
-  <button onclick="savePass()">Save & Continue</button>
+
+<header>
+  <div class="logo">Secure<span>Send</span></div>
+  <div class="status-dot" id="statusDot"></div>
+</header>
+
+<!-- SETUP CARD (shown only first time) -->
+<div class="card" id="setupCard">
+  <div class="card-title">// Initial Setup</div>
+  <label>Discord Webhook URL</label>
+  <input type="text" id="setupWebhook" placeholder="https://discord.com/api/webhooks/..." autocomplete="off">
+  <label>Cloudflare Worker URL</label>
+  <input type="text" id="setupWorker" placeholder="https://your-worker.workers.dev" autocomplete="off">
+  <label>Passphrase (never leaves your device)</label>
+  <input type="password" id="setupPass" placeholder="Strong secret passphrase">
+  <button class="btn" onclick="saveSetup()">SAVE &amp; CONTINUE</button>
 </div>
-<div id="main" style="display:none">
-  <h2>Send Message</h2>
-  <textarea id="msg" placeholder="Type your message..."></textarea>
-  <button onclick="sendMsg()">Send</button>
-  <button onclick="changePass()" style="background:#aaa;margin-top:5px">Change Passphrase</button>
-  <div id="status"></div>
+
+<!-- MAIN SEND CARD -->
+<div class="card hidden" id="mainCard">
+  <div class="card-title">// Transmit Encrypted Message</div>
+  <label>Message</label>
+  <textarea id="msgInput" placeholder="Type your message..."></textarea>
+  <div class="char-count"><span id="charCount">0</span> chars</div>
+  <div class="enc-preview" id="encPreview"></div>
+  <button class="btn" id="sendBtn" onclick="sendMessage()">ENCRYPT &amp; SEND</button>
 </div>
+
+<button class="settings-toggle hidden" id="settingsToggle" onclick="toggleSettings()">⚙ change settings</button>
+
+<!-- SETTINGS CARD -->
+<div class="card danger hidden" id="settingsCard">
+  <div class="card-title">// Settings</div>
+  <label>Discord Webhook URL</label>
+  <input type="text" id="sWebhook" autocomplete="off">
+  <label>Cloudflare Worker URL</label>
+  <input type="text" id="sWorker" autocomplete="off">
+  <label>Passphrase</label>
+  <input type="password" id="sPass" placeholder="New passphrase">
+  <button class="btn danger" onclick="saveSettings()">SAVE SETTINGS</button>
+</div>
+
+<div id="toast"></div>
+
 <script>
-const NTFY_TOPIC = 'your-secret-random-topic-name';
+// ─── Storage keys ───────────────────────────────────────────────
+const KEY_WEBHOOK  = 'ss_webhook';
+const KEY_WORKER   = 'ss_worker';
+const KEY_PASS     = 'ss_pass';
 
-async function getKey(passphrase, salt) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
-  );
-}
-
-async function encrypt(text, passphrase) {
-  const enc = new TextEncoder();
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await getKey(passphrase, salt);
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text));
-  const buf = new Uint8Array(salt.byteLength + iv.byteLength + ciphertext.byteLength);
-  buf.set(salt, 0);
-  buf.set(iv, 16);
-  buf.set(new Uint8Array(ciphertext), 28);
-  return btoa(String.fromCharCode(...buf));
-}
-
-function savePass() {
-  const p = document.getElementById('passInput').value;
-  if (!p) return alert('Enter a passphrase');
-  localStorage.setItem('pp', p);
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('main').style.display = 'block';
-}
-
-function changePass() {
-  localStorage.removeItem('pp');
-  document.getElementById('main').style.display = 'none';
-  document.getElementById('passInput').value = '';
-  document.getElementById('setup').style.display = 'block';
-}
-
-async function sendMsg() {
-  const text = document.getElementById('msg').value.trim();
-  if (!text) return;
-  const pp = localStorage.getItem('pp');
-  const encrypted = await encrypt(text, pp);
-  const res = await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
-    method: 'POST',
-    body: encrypted
+// ─── Init ────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem(KEY_WEBHOOK) && localStorage.getItem(KEY_PASS)) {
+    showMain();
+  }
+  document.getElementById('msgInput').addEventListener('input', e => {
+    document.getElementById('charCount').textContent = e.target.value.length;
   });
-  if (res.ok) {
-    document.getElementById('status').textContent = 'Sent!';
-    document.getElementById('msg').value = '';
-    setTimeout(() => document.getElementById('status').textContent = '', 2000);
-  } else {
-    document.getElementById('status').textContent = 'Failed.';
+});
+
+function showMain() {
+  document.getElementById('setupCard').classList.add('hidden');
+  document.getElementById('mainCard').classList.remove('hidden');
+  document.getElementById('settingsToggle').classList.remove('hidden');
+}
+
+function saveSetup() {
+  const webhook = document.getElementById('setupWebhook').value.trim();
+  const worker  = document.getElementById('setupWorker').value.trim();
+  const pass    = document.getElementById('setupPass').value;
+  if (!webhook || !worker || !pass) return toast('All fields required', 'err');
+  if (!webhook.startsWith('https://discord.com/api/webhooks/')) return toast('Invalid webhook URL', 'err');
+  localStorage.setItem(KEY_WEBHOOK, webhook);
+  localStorage.setItem(KEY_WORKER, worker);
+  localStorage.setItem(KEY_PASS, pass);
+  showMain();
+  toast('Setup saved!', 'ok');
+}
+
+function toggleSettings() {
+  const card = document.getElementById('settingsCard');
+  const hidden = card.classList.toggle('hidden');
+  if (!hidden) {
+    document.getElementById('sWebhook').value = localStorage.getItem(KEY_WEBHOOK) || '';
+    document.getElementById('sWorker').value  = localStorage.getItem(KEY_WORKER) || '';
+    document.getElementById('sPass').value    = '';
   }
 }
 
-if (localStorage.getItem('pp')) {
-  document.getElementById('main').style.display = 'block';
-} else {
-  document.getElementById('setup').style.display = 'block';
+function saveSettings() {
+  const webhook = document.getElementById('sWebhook').value.trim();
+  const worker  = document.getElementById('sWorker').value.trim();
+  const pass    = document.getElementById('sPass').value;
+  if (!webhook || !worker) return toast('Webhook & Worker required', 'err');
+  localStorage.setItem(KEY_WEBHOOK, webhook);
+  localStorage.setItem(KEY_WORKER, worker);
+  if (pass) localStorage.setItem(KEY_PASS, pass);
+  document.getElementById('settingsCard').classList.add('hidden');
+  toast('Settings saved', 'ok');
+}
+
+// ─── Encryption (AES-256-GCM via WebCrypto) ──────────────────────
+async function deriveKey(passphrase, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 310000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptMessage(plaintext, passphrase) {
+  const enc   = new TextEncoder();
+  const salt  = crypto.getRandomValues(new Uint8Array(16));
+  const iv    = crypto.getRandomValues(new Uint8Array(12));
+  const key   = await deriveKey(passphrase, salt);
+  const ct    = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    enc.encode(plaintext)
+  );
+  // Pack: salt(16) + iv(12) + ciphertext → base64
+  const combined = new Uint8Array(16 + 12 + ct.byteLength);
+  combined.set(salt, 0);
+  combined.set(iv, 16);
+  combined.set(new Uint8Array(ct), 28);
+  return btoa(String.fromCharCode(...combined));
+}
+
+// ─── Send ─────────────────────────────────────────────────────────
+async function sendMessage() {
+  const msg     = document.getElementById('msgInput').value.trim();
+  const pass    = localStorage.getItem(KEY_PASS);
+  const webhook = localStorage.getItem(KEY_WEBHOOK);
+  const worker  = localStorage.getItem(KEY_WORKER);
+
+  if (!msg)  return toast('Message is empty', 'err');
+  if (!pass) return toast('No passphrase set', 'err');
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = 'ENCRYPTING...';
+
+  try {
+    const encrypted = await encryptMessage(msg, pass);
+
+    // Show preview
+    const prev = document.getElementById('encPreview');
+    prev.style.display = 'block';
+    prev.textContent = encrypted.substring(0, 120) + '…';
+
+    btn.textContent = 'SENDING...';
+
+    const workerUrl = worker.replace(/\/$/, '');
+
+    const res = await fetch(workerUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        webhookUrl: webhook,
+        payload: {
+          username: 'SecureSend',
+          content: '🔒 `' + encrypted + '`'
+        }
+      })
+    });
+
+    if (res.ok || res.status === 204) {
+      toast('Message sent ✓', 'ok');
+      document.getElementById('msgInput').value = '';
+      document.getElementById('charCount').textContent = '0';
+      setTimeout(() => { prev.style.display = 'none'; }, 3000);
+    } else {
+      const txt = await res.text();
+      toast('Discord error: ' + res.status, 'err');
+      console.error(txt);
+    }
+  } catch (e) {
+    toast('Error: ' + e.message, 'err');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'ENCRYPT & SEND';
+  }
+}
+
+// ─── Toast ───────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
 }
 </script>
 </body>
