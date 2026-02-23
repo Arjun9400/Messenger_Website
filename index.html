@@ -380,6 +380,28 @@ async function encryptMessage(plaintext, passphrase) {
 }
 
 // ─── Send ─────────────────────────────────────────────────────────
+const CHUNK_SIZE = 1000;
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function postToDiscord(workerUrl, webhook, encrypted) {
+  const res = await fetch(workerUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      webhookUrl: webhook,
+      payload: {
+        username: 'SecureSend',
+        content: '🔒 `' + encrypted + '`'
+      }
+    })
+  });
+  if (!res.ok && res.status !== 204) {
+    const txt = await res.text();
+    throw new Error('Discord error ' + res.status + ': ' + txt);
+  }
+}
+
 async function sendMessage() {
   const msg     = document.getElementById('msgInput').value.trim();
   const pass    = localStorage.getItem(KEY_PASS);
@@ -391,42 +413,46 @@ async function sendMessage() {
 
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
-  btn.textContent = 'ENCRYPTING...';
+
+  // Split into 1000-char chunks
+  const chunks = [];
+  for (let i = 0; i < msg.length; i += CHUNK_SIZE) {
+    chunks.push(msg.slice(i, i + CHUNK_SIZE));
+  }
+
+  const workerUrl = worker.replace(/\/$/, '');
+  const prev = document.getElementById('encPreview');
 
   try {
-    const encrypted = await encryptMessage(msg, pass);
+    for (let i = 0; i < chunks.length; i++) {
+      const isLast = i === chunks.length - 1;
+      // Append hyphen to all chunks except the last
+      const chunk = chunks.length > 1 && !isLast ? chunks[i] + '-' : chunks[i];
 
-    // Show preview
-    const prev = document.getElementById('encPreview');
-    prev.style.display = 'block';
-    prev.textContent = encrypted.substring(0, 120) + '…';
+      btn.textContent = chunks.length > 1
+        ? `ENCRYPTING ${i+1}/${chunks.length}...`
+        : 'ENCRYPTING...';
 
-    btn.textContent = 'SENDING...';
+      const encrypted = await encryptMessage(chunk, pass);
 
-    const workerUrl = worker.replace(/\/$/, '');
+      prev.style.display = 'block';
+      prev.textContent = encrypted.substring(0, 120) + '…';
 
-    const res = await fetch(workerUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        webhookUrl: webhook,
-        payload: {
-          username: 'SecureSend',
-          content: '🔒 `' + encrypted + '`'
-        }
-      })
-    });
+      btn.textContent = chunks.length > 1
+        ? `SENDING ${i+1}/${chunks.length}...`
+        : 'SENDING...';
 
-    if (res.ok || res.status === 204) {
-      toast('Message sent ✓', 'ok');
-      document.getElementById('msgInput').value = '';
-      document.getElementById('charCount').textContent = '0';
-      setTimeout(() => { prev.style.display = 'none'; }, 3000);
-    } else {
-      const txt = await res.text();
-      toast('Discord error: ' + res.status, 'err');
-      console.error(txt);
+      await postToDiscord(workerUrl, webhook, encrypted);
+
+      // Wait 300ms between chunks (not after last)
+      if (!isLast) await sleep(300);
     }
+
+    toast(chunks.length > 1 ? `Sent ${chunks.length} parts ✓` : 'Message sent ✓', 'ok');
+    document.getElementById('msgInput').value = '';
+    document.getElementById('charCount').textContent = '0';
+    setTimeout(() => { prev.style.display = 'none'; }, 3000);
+
   } catch (e) {
     toast('Error: ' + e.message, 'err');
     console.error(e);
