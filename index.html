@@ -287,6 +287,15 @@
   <button class="btn danger" onclick="saveSettings()">SAVE SETTINGS</button>
 </div>
 
+<!-- BUS TIMES WIDGET -->
+<div class="card" id="busCard" style="margin-top:4px;">
+  <div class="card-title">// Live Bus Times</div>
+  <div id="busOutput" style="font-family:'Share Tech Mono',monospace;font-size:12px;line-height:2;color:var(--text);">
+    <span style="color:var(--muted)">Loading...</span>
+  </div>
+  <button class="btn" onclick="fetchBuses()" style="margin-top:10px;font-size:12px;letter-spacing:2px;">↻ REFRESH</button>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -471,8 +480,48 @@ function toast(msg, type = 'ok') {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.className = ''; }, 3000);
 }
+
+// ─── Bus Times ───────────────────────────────────────────────────
+const BUS_API = 'https://nctx.crudworks.workers.dev/';
+const BUS_STOPS = [
+  { label: 'Vic Centre',   ids: ['3390J6','3390J5'], groups: [{ name: 'Pink', routes: ['28','30'] }] },
+  { label: 'Faraday Rd',   ids: ['3390RA11'],        groups: [{ name: 'Pink', routes: ['28','30'] }] },
+  { label: 'Cornerhouse',  ids: ['3390T7'],           groups: [{ name: '4',    routes: ['4'] }] },
+  { label: 'NTU Clifton',  ids: ['3390CL97'],         groups: [{ name: '4',    routes: ['4'] }] },
+  { label: 'The Crown',    ids: ['3390WO35'],          groups: [{ name: '53/54',routes: ['53','53B','54','54B'] }] },
+  { label: 'Fabis Dr',     ids: ['3390CL41'],          groups: [{ name: '53/54',routes: ['53','53B','54','54B'] }] },
+];
+
+async function fetchStop(id) {
+  try {
+    const r = await fetch(BUS_API + '?stopId=' + id + '&maxResults=6');
+    return (await r.json()).departures || [];
+  } catch { return []; }
+}
+
+async function fetchBuses() {
+  const el = document.getElementById('busOutput');
+  el.innerHTML = '<span style="color:var(--muted)">Loading...</span>';
+  const lines = [];
+  for (const stop of BUS_STOPS) {
+    const allDeps = (await Promise.all(stop.ids.map(fetchStop))).flat();
+    const parts = [];
+    for (const g of stop.groups) {
+      const times = [];
+      for (const d of allDeps) {
+        const r = d.lineRef || d.routeNumber || d.serviceNumber || '';
+        if (g.routes.includes(r) && times.length < 2) times.push(d.expected || '?');
+      }
+      if (times.length) parts.push(g.name + ': ' + times.join('/'));
+    }
+    const val = parts.length ? parts.join('  ') : '—';
+    lines.push('<span style="color:var(--muted)">' + stop.label + '</span>  ' + val);
+  }
+  el.innerHTML = lines.join('<br>');
+}
+
+// Auto-load on page ready
+window.addEventListener('DOMContentLoaded', fetchBuses);
 </script>
 </body>
 </html>
-
-
